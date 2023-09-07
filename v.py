@@ -9,14 +9,16 @@ import xml.etree.ElementTree as ET
 import cv2
 import shutil
 import re
+import html
+from html import unescape
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 from googleapiclient.errors import HttpError
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
+#from selenium import webdriver
+#from selenium.webdriver.common.by import By
+#from selenium.webdriver.support.ui import WebDriverWait
+#from selenium.webdriver.support import expected_conditions as EC
 
 
 parser = argparse.ArgumentParser(description='Create a video from jacket and audio.')
@@ -51,7 +53,7 @@ def get_music_info(music_id, music_db_path):
         root = ET.fromstring(contents)
         music = root.find(f"./music[@id='{int(music_id):d}']")
         if music:
-            title_name = music.find('./info/title_name').text
+            title_name = unescape(music.find('./info/title_name').text)
             artist_name = music.find('./info/artist_name').text
             version = int(music.find('./info/version').text)
             
@@ -67,6 +69,7 @@ def get_music_info(music_id, music_db_path):
             }
             
             version_title = version_dict.get(version, f"Version {version}")
+
             return title_name, artist_name, version_title
         else:
             print(f"Song ID {music_id} not found in musicdb.")
