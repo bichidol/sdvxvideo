@@ -81,10 +81,24 @@ def get_sanitized_filename(filename):
             '隍' : 'Ü',
             '龕' : '€',
             '趁' : 'Ǣ',
+            '彜' : 'ū',
+            '騫' : 'á',
+            '鬯' : 'ī',
+            '瑟' : 'ō',
+            '黷' : 'ē',
+            '齣' : 'Ú',
+            '齧' : 'Ä',
+            '霻' : '♠',
+            '齪' : '♣',
+            '鑈' : '♦',
+            '齲' : '♥',
+            '�人' : 'êl',
         }
+    
     for bad, good in homoglyphs.items():
         filename = filename.replace(bad, good)
     return filename
+
 
 
 def create_video(folderpath, music_db_path, output_directory):
@@ -141,11 +155,11 @@ def create_video(folderpath, music_db_path, output_directory):
 
     if output_directory is None:
         script_directory = os.path.dirname(os.path.abspath(__file__))
-        output_file_name = os.path.join(script_directory, video_title + ".mp4")
+        output_file_name = os.path.join(script_directory, video_title + ".mov")
     else:
-        output_file_name = os.path.join(output_directory, video_title + ".mp4")
+        output_file_name = os.path.join(output_directory, video_title + ".mov")
 
-    video.write_videofile(output_file_name, audio_codec="aac")
+    video.write_videofile(output_file_name, audio_codec="pcm_s16le", codec="libx264", bitrate="5000k")
 
 for folderpath in args.folderpaths:
     create_video(folderpath, args.musicdb, args.outputdir)
