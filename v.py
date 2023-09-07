@@ -102,6 +102,10 @@ def get_sanitized_filename(filename):
             '闃' : 'Ā',
             '煢' : 'ø',
             '蔕' : 'ῦ',
+            '雋' : 'Ǜ',
+            '鬻' : '♃',
+            '鬥' : 'Ã',
+            '鬆' : 'Ý',
         }
     for bad, good in homoglyphs.items():
         filename = filename.replace(bad, good)
