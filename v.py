@@ -8,6 +8,7 @@ import xml.etree.ElementTree as ET
 import cv2
 import shutil
 import re
+from pydub import AudioSegment
 
 parser = argparse.ArgumentParser(description='Create a video from jacket and audio.')
 parser.add_argument('folderpaths', type=str, nargs='*', help='Paths to folders containing the audio and image files')
@@ -187,7 +188,14 @@ def create_video(folderpath, music_db_path, output_directory):
         return
 
     audio_file_path = os.path.join(folderpath, audio_file)
-    audio = AudioFileClip(audio_file_path)
+
+    audio = AudioSegment.from_file(audio_file_path)
+
+    audio = audio.set_frame_rate(44100)
+
+    audio.export('resampled_audio.wav', format='wav')
+
+    audio = AudioFileClip('resampled_audio.wav')
 
     image_file_patterns = ['*5_b.png', '*4_b.png', '*3_b.png', '*2_b.png', '*1_b.png']
     image_file = None
