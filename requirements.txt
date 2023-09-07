@@ -2,5 +2,9 @@ argparse
 moviepy
 pillow
 numpy
+os-win
+glob2
 lxml
 opencv-python-headless
+shutilwhich
+pydub
