@@ -1,0 +1,8 @@
+argparse
+moviepy
+pillow
+numpy
+lxml
+opencv-python-headless
+google-auth-oauthlib
+google-api-python-client
