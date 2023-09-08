@@ -8,6 +8,7 @@ import xml.etree.ElementTree as ET
 import cv2
 import shutil
 import re
+import subprocess
 from pydub import AudioSegment
 
 parser = argparse.ArgumentParser(description='Create a video from jacket and audio.')
@@ -40,7 +41,7 @@ def get_music_info(music_id, music_db_path):
             inf_ver_value = int(inf_ver.text) if inf_ver is not None and inf_ver.text.isdigit() else 1
             return title_name, artist_name, inf_ver_value
         else:
-            print(f"Song ID {music_id} not found in the music database.")
+            print(f"Song ID {music_id} not found.")
             return None, None, None
     except Exception as e:
         print(f"An error occurred: {e}")
@@ -208,8 +209,10 @@ def create_video(folderpath, music_db_path, output_directory):
         audio_file_path = os.path.join(folderpath, audio_file)
         audio = AudioSegment.from_file(audio_file_path)
         audio = audio.set_frame_rate(44100)
-        audio.export('resampled_audio.wav', format='wav')
-        audio = AudioFileClip('resampled_audio.wav')
+        audio.export('resampled_audio.asf', format='asf')
+        audio = AudioFileClip('resampled_audio.asf')
+        audio = audio.subclip(0, audio.duration - 0.1)
+
 
         if jacket_file:
             image = cv2.imread(jacket_file)
@@ -222,13 +225,16 @@ def create_video(folderpath, music_db_path, output_directory):
             exit(1)
 
         img = img.set_duration(audio.duration)
-        img.fps = 24
+        img.fps = 15
 
         video = img.set_audio(audio)
 
         sanitized_video_title = get_sanitized_filename(video_title)
         output_file_name = os.path.join(output_directory or os.path.dirname(os.path.abspath(__file__)), sanitized_video_title + ".mov")
         video.write_videofile(output_file_name, audio_codec="pcm_s16le", codec="libx264", bitrate="5000k")
+        
+        if os.path.exists('resampled_audio.asf'):
+            os.remove('resampled_audio.asf')
 
     audio_created = False
     normal_audio_created = False
