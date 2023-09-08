@@ -193,15 +193,16 @@ def create_video(folderpath, music_db_path, output_directory):
     def find_audio_and_jacket(suffix, jacket_suffix):
         audio_file = next((f for f in files_in_directory if re.search(suffix, f) and not re.search('_pre.s3v$', f) and not re.search('_fx.s3v$', f)), None)
         if audio_file:
-            jacket_file_pattern = f"*{jacket_suffix}_b.png"
-            jacket_file = next(iter(glob.glob(os.path.join(folderpath, jacket_file_pattern))), None)
-            if not jacket_file:
-                for pattern in reversed(image_file_patterns):
-                    jacket_file = next(iter(glob.glob(os.path.join(folderpath, pattern))), None)
-                    if jacket_file:
-                        break
+            jacket_file = None
+            current_jacket_suffix = int(jacket_suffix)
+            while not jacket_file and current_jacket_suffix >= 1:
+                jacket_file_pattern = f"*{current_jacket_suffix}_b.png"
+                jacket_file = next(iter(glob.glob(os.path.join(folderpath, jacket_file_pattern))), None)
+                current_jacket_suffix -= 1
+            
             return audio_file, jacket_file
         return None, None
+
 
     def create_video_file(audio_file, jacket_file, video_title):
         audio_file_path = os.path.join(folderpath, audio_file)
@@ -236,56 +237,95 @@ def create_video(folderpath, music_db_path, output_directory):
             continue
         
         audio_file, jacket_file = find_audio_and_jacket(suffix, suffix[1])
+        #print(suffix)
         if audio_file and jacket_file:
             video_title = f"{artist_name} - {title_name} {ending}"
             create_video_file(audio_file, jacket_file, video_title)
             audio_created = True
+            #break
 
-    if inf_ver > 1:
-        audio_file_4i, jacket_file_4i = find_audio_and_jacket('_4i.s3v', '4')
-        if audio_file_4i and jacket_file_4i:
-            ending = inf_cases.get(inf_ver, "")
-            video_title = f"{artist_name} - {title_name} {ending}"
-            create_video_file(audio_file_4i, jacket_file_4i, video_title)
-            audio_created = True
+    if not audio_created:
+        if inf_ver > 1:
+            audio_file_4i, jacket_file_4i = find_audio_and_jacket('_4i.s3v', '4')
+            #print(f"audio_file_4i: {audio_file_4i}, jacket_file_4i: {jacket_file_4i}") 
 
-            audio_file_normal = find_audio_and_jacket(r'.*s3v(?!_.*\d{1}[a-zA-Z]{1}\.s3v)$', '5')[0]
-            if audio_file_normal:
-                jacket_file_below_4i = find_audio_and_jacket('.s3v', '5')[1]
-                if not jacket_file_below_4i:
+            if audio_file_4i:
+                if not jacket_file_4i:
                     for i in reversed(range(1, 4)):
-                        jacket_file_below_4i = find_audio_and_jacket(f'_{i}i.s3v', str(i))[1]
-                        if jacket_file_below_4i:
+                        jacket_file_4i = find_audio_and_jacket(r'^(?!.*_\d[a-zA-Z]\.s3v).*\.s3v$', str(i))[1]
+                        if jacket_file_4i:
                             break
 
-                if jacket_file_below_4i:
-                    video_title = f"{artist_name} - {title_name}"
-                    create_video_file(audio_file_normal, jacket_file_below_4i, video_title)
-                    normal_audio_created = True
+                if jacket_file_4i:
+                    ending = inf_cases.get(inf_ver, "")
+                    video_title = f"{artist_name} - {title_name} {ending}"
+                    create_video_file(audio_file_4i, jacket_file_4i, video_title)
+                    audio_created = True
+                else:
+                    print("no jacket")
+                    pass
+            if not audio_created:
+                audio_file_normal = find_audio_and_jacket(r'^(?!.*_\d[a-zA-Z]\.s3v).*\.s3v$', '5')[0]
+                #print("im here no 4i audio")
+                if audio_file_normal:
+                    jacket_file_below_4i = find_audio_and_jacket(r'^(?!.*_\d[a-zA-Z]\.s3v).*\.s3v$', '5')[1]
+                    #print(jacket_file_below_4i)
+                    if not jacket_file_below_4i:
+                        for i in reversed(range(1, 4)):
+                            jacket_file_below_4i = find_audio_and_jacket(f'_{i}i.s3v', str(i))[1]
+                            if jacket_file_below_4i:
+                                break
+
+                    if jacket_file_below_4i:
+                        video_title = f"{artist_name} - {title_name}"
+                        create_video_file(audio_file_normal, jacket_file_below_4i, video_title)
+                        normal_audio_created = True
+                        
+            else:
+                audio_file_normal = find_audio_and_jacket(r'^(?!.*_\d[a-zA-Z]\.s3v).*\.s3v$', '5')[0]
+                #print("im here already created inf video")
+                if audio_file_normal:
+                    jacket_file_below_4i = find_audio_and_jacket(r'^(?!.*_\d[a-zA-Z]\.s3v).*\.s3v$', '3')[1]
+                    #print(jacket_file_below_4i)
+                    if not jacket_file_below_4i:
+                        for i in reversed(range(1, 3)):
+                            jacket_file_below_4i = find_audio_and_jacket(f'_{i}i.s3v', str(i))[1]
+                            if jacket_file_below_4i:
+                                break
+
+                    if jacket_file_below_4i:
+                        video_title = f"{artist_name} - {title_name}"
+                        create_video_file(audio_file_normal, jacket_file_below_4i, video_title)
+                        normal_audio_created = True
+                
         else:
-            audio_file_normal = find_audio_and_jacket('.s3v', '4')[0]
+            audio_file_normal = find_audio_and_jacket(r'^(?!.*_\d[a-zA-Z]\.s3v).*\.s3v$', '5')[0]
+            #print("why am i here")
             if audio_file_normal:
-                jacket_file_best = find_audio_and_jacket('.s3v', '4')[1]
-                if not jacket_file_best:
-                    for i in reversed(range(1, 4)):
-                        jacket_file_best = find_audio_and_jacket(f'_{i}i.s3v', str(i))[1]
-                        if jacket_file_best:
-                            break
+                jacket_file_best = None
+                for i in reversed(range(1, 6)):
+                    if not jacket_file_best:
+                        jacket_file_best = find_audio_and_jacket('.s3v', str(i))[1]
+                    else:
+                        break
 
                 if jacket_file_best:
                     video_title = f"{artist_name} - {title_name}"
                     create_video_file(audio_file_normal, jacket_file_best, video_title)
                     normal_audio_created = True
 
+
     if not normal_audio_created:
-        audio_file_normal = find_audio_and_jacket(r'.*s3v(?!_.*\d{1}[a-zA-Z]{1}\.s3v)$', '5')[0]
+        audio_file_normal = find_audio_and_jacket(r'^(?!.*_\d[a-zA-Z]\.s3v).*\.s3v$', '5')[0]
+        #print("why tf am i here")
+        #print(audio_file_normal)
         if audio_file_normal:
-            jacket_file_best = find_audio_and_jacket('.s3v', '5')[1]
-            if not jacket_file_best:
-                for i in reversed(range(1, 4)):
-                    jacket_file_best = find_audio_and_jacket(f'_{i}i.s3v', str(i))[1]
-                    if jacket_file_best:
-                        break
+            jacket_file_best = None
+            for i in reversed(range(1, 6)):
+                if not jacket_file_best:
+                    jacket_file_best = find_audio_and_jacket('.s3v', str(i))[1]
+                else:
+                    break
 
             if jacket_file_best:
                 video_title = f"{artist_name} - {title_name}"
