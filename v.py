@@ -209,8 +209,8 @@ def create_video(folderpath, music_db_path, output_directory):
         audio_file_path = os.path.join(folderpath, audio_file)
         audio = AudioSegment.from_file(audio_file_path)
         audio = audio.set_frame_rate(44100)
-        audio.export('resampled_audio.asf', format='asf')
-        audio = AudioFileClip('resampled_audio.asf')
+        audio.export('resampled_audio.wav', format='wav')
+        audio = AudioFileClip('resampled_audio.wav')
         audio = audio.subclip(0, audio.duration - 0.1)
 
 
