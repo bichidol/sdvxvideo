@@ -191,7 +191,7 @@ def create_video(folderpath, music_db_path, output_directory):
     }
 
     def find_audio_and_jacket(suffix, jacket_suffix):
-        audio_file = next((f for f in files_in_directory if re.search(suffix, f) and not re.search('_pre.s3v$', f) and not re.search('_fx.s3v$', f)), None)
+        audio_file = next((f for f in files_in_directory if re.search(suffix, f) and not re.search('_pre.s3v$', f) and not re.search('_fx.s3v$', f) and not re.search('_pre_..\.s3v$', f)), None)
         if audio_file:
             jacket_file = None
             current_jacket_suffix = int(jacket_suffix)
