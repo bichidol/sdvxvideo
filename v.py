@@ -233,6 +233,8 @@ def create_video(folderpath, music_db_path, output_directory):
         output_file_name = os.path.join(output_directory or os.path.dirname(os.path.abspath(__file__)), sanitized_video_title + ".mov")
         video.write_videofile(output_file_name, audio_codec="pcm_s16le", codec="libx264", bitrate="5000k")
         
+        audio.close()
+        
         if os.path.exists('resampled_audio.asf'):
             os.remove('resampled_audio.asf')
 
