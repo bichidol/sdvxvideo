@@ -235,8 +235,8 @@ def create_video(folderpath, music_db_path, output_directory):
         
         audio.close()
         
-        if os.path.exists('resampled_audio.asf'):
-            os.remove('resampled_audio.asf')
+        if os.path.exists('resampled_audio.wav'):
+            os.remove('resampled_audio.wav')
 
     audio_created = False
     normal_audio_created = False
