@@ -36,13 +36,15 @@ def get_music_info(music_id, music_db_path):
         if music:
             title_name = music.find('./info/title_name').text
             artist_name = music.find('./info/artist_name').text
-            return title_name, artist_name
+            inf_ver = music.find('./info/inf_ver')
+            inf_ver_value = int(inf_ver.text) if inf_ver is not None and inf_ver.text.isdigit() else 1
+            return title_name, artist_name, inf_ver_value
         else:
             print(f"Song ID {music_id} not found in the music database.")
-            return None, None
+            return None, None, None
     except Exception as e:
         print(f"An error occurred: {e}")
-        return None, None
+        return None, None, None
 
 
 def get_sanitized_filename(filename):
@@ -165,69 +167,131 @@ def get_sanitized_filename(filename):
 def create_video(folderpath, music_db_path, output_directory):
     music_id = os.path.basename(folderpath)[:4]
 
-    title_name, artist_name = get_music_info(music_id, music_db_path)
+    title_name, artist_name, inf_ver = get_music_info(music_id, music_db_path)
 
     if not title_name or not artist_name:
         return
 
-    video_title = f"{artist_name} - {title_name}"
-    video_title = get_sanitized_filename(video_title)
-
     files_in_directory = os.listdir(folderpath)
-
-    audio_file_endings = ['_5m.s3v', '_4i.s3v', '_3e.s3v', '_2a.s3v', '_1n.s3v', '.s3v']
-    audio_file = None
-
-    for ending in audio_file_endings:
-        audio_file = next((f for f in files_in_directory if f.endswith(ending) and not f.endswith('_pre.s3v')), None)
-        if audio_file:
-            break
-
-    if not audio_file:
-        print(f"No valid audio file found in folder: {folderpath}. Skipping...")
-        return
-
-    audio_file_path = os.path.join(folderpath, audio_file)
-
-    audio = AudioSegment.from_file(audio_file_path)
-
-    audio = audio.set_frame_rate(44100)
-
-    audio.export('resampled_audio.wav', format='wav')
-
-    audio = AudioFileClip('resampled_audio.wav')
-
     image_file_patterns = ['*5_b.png', '*4_b.png', '*3_b.png', '*2_b.png', '*1_b.png']
-    image_file = None
-    for pattern in image_file_patterns:
-        image_files = glob.glob(os.path.join(folderpath, pattern))
-        if image_files:
-            image_file = image_files[0]
-            break
 
-    if image_file:
-        image = cv2.imread(image_file)
-        image_resized = cv2.resize(image, (1080, 1080), interpolation=cv2.INTER_LANCZOS4)
-        image_resized = cv2.cvtColor(image_resized, cv2.COLOR_BGR2RGB)
+    special_cases = {
+        "_5m.s3v": "[MXM]",
+        "_3e.s3v": "[EXH]",
+        "_2a.s3v": "[ADV]",
+        "_1n.s3v": "[NOV]",
+    }
 
-        img = ImageClip(image_resized)
-    else:
-        print(f"No image found in folder: {folderpath}")
-        exit(1)
+    inf_cases = {
+        2: "[INF]",
+        3: "[GRV]",
+        4: "[HVN]",
+        5: "[VVD]",
+        6: "[XCD]"
+    }
 
-    img = img.set_duration(audio.duration)
+    def find_audio_and_jacket(suffix, jacket_suffix):
+        audio_file = next((f for f in files_in_directory if re.search(suffix, f) and not re.search('_pre.s3v$', f) and not re.search('_fx.s3v$', f)), None)
+        if audio_file:
+            jacket_file_pattern = f"*{jacket_suffix}_b.png"
+            jacket_file = next(iter(glob.glob(os.path.join(folderpath, jacket_file_pattern))), None)
+            if not jacket_file:
+                for pattern in reversed(image_file_patterns):
+                    jacket_file = next(iter(glob.glob(os.path.join(folderpath, pattern))), None)
+                    if jacket_file:
+                        break
+            return audio_file, jacket_file
+        return None, None
 
-    img.fps = 24
+    def create_video_file(audio_file, jacket_file, video_title):
+        audio_file_path = os.path.join(folderpath, audio_file)
+        audio = AudioSegment.from_file(audio_file_path)
+        audio = audio.set_frame_rate(44100)
+        audio.export('resampled_audio.wav', format='wav')
+        audio = AudioFileClip('resampled_audio.wav')
 
-    video = img.set_audio(audio)
+        if jacket_file:
+            image = cv2.imread(jacket_file)
+            image_resized = cv2.resize(image, (1080, 1080), interpolation=cv2.INTER_LANCZOS4)
+            image_resized = cv2.cvtColor(image_resized, cv2.COLOR_BGR2RGB)
 
-    if output_directory is None:
-        script_directory = os.path.dirname(os.path.abspath(__file__))
-        output_file_name = os.path.join(script_directory, video_title + ".mov")
-    else:
-        output_file_name = os.path.join(output_directory, video_title + ".mov")
+            img = ImageClip(image_resized)
+        else:
+            print(f"No image found in folder: {folderpath}")
+            exit(1)
 
-    video.write_videofile(output_file_name, audio_codec="pcm_s16le", codec="libx264", bitrate="5000k")
+        img = img.set_duration(audio.duration)
+        img.fps = 24
+
+        video = img.set_audio(audio)
+
+        sanitized_video_title = get_sanitized_filename(video_title)
+        output_file_name = os.path.join(output_directory or os.path.dirname(os.path.abspath(__file__)), sanitized_video_title + ".mov")
+        video.write_videofile(output_file_name, audio_codec="pcm_s16le", codec="libx264", bitrate="5000k")
+
+    audio_created = False
+    normal_audio_created = False
+    for suffix, ending in special_cases.items():
+        if suffix not in special_cases:
+            continue
+        
+        audio_file, jacket_file = find_audio_and_jacket(suffix, suffix[1])
+        if audio_file and jacket_file:
+            video_title = f"{artist_name} - {title_name} {ending}"
+            create_video_file(audio_file, jacket_file, video_title)
+            audio_created = True
+
+    if inf_ver > 1:
+        audio_file_4i, jacket_file_4i = find_audio_and_jacket('_4i.s3v', '4')
+        if audio_file_4i and jacket_file_4i:
+            ending = inf_cases.get(inf_ver, "")
+            video_title = f"{artist_name} - {title_name} {ending}"
+            create_video_file(audio_file_4i, jacket_file_4i, video_title)
+            audio_created = True
+
+            audio_file_normal = find_audio_and_jacket(r'.*s3v(?!_.*\d{1}[a-zA-Z]{1}\.s3v)$', '5')[0]
+            if audio_file_normal:
+                jacket_file_below_4i = find_audio_and_jacket('.s3v', '5')[1]
+                if not jacket_file_below_4i:
+                    for i in reversed(range(1, 4)):
+                        jacket_file_below_4i = find_audio_and_jacket(f'_{i}i.s3v', str(i))[1]
+                        if jacket_file_below_4i:
+                            break
+
+                if jacket_file_below_4i:
+                    video_title = f"{artist_name} - {title_name}"
+                    create_video_file(audio_file_normal, jacket_file_below_4i, video_title)
+                    normal_audio_created = True
+        else:
+            audio_file_normal = find_audio_and_jacket('.s3v', '4')[0]
+            if audio_file_normal:
+                jacket_file_best = find_audio_and_jacket('.s3v', '4')[1]
+                if not jacket_file_best:
+                    for i in reversed(range(1, 4)):
+                        jacket_file_best = find_audio_and_jacket(f'_{i}i.s3v', str(i))[1]
+                        if jacket_file_best:
+                            break
+
+                if jacket_file_best:
+                    video_title = f"{artist_name} - {title_name}"
+                    create_video_file(audio_file_normal, jacket_file_best, video_title)
+                    normal_audio_created = True
+
+    if not normal_audio_created:
+        audio_file_normal = find_audio_and_jacket(r'.*s3v(?!_.*\d{1}[a-zA-Z]{1}\.s3v)$', '5')[0]
+        if audio_file_normal:
+            jacket_file_best = find_audio_and_jacket('.s3v', '5')[1]
+            if not jacket_file_best:
+                for i in reversed(range(1, 4)):
+                    jacket_file_best = find_audio_and_jacket(f'_{i}i.s3v', str(i))[1]
+                    if jacket_file_best:
+                        break
+
+            if jacket_file_best:
+                video_title = f"{artist_name} - {title_name}"
+                create_video_file(audio_file_normal, jacket_file_best, video_title)
+                normal_audio_created = True
+
 
 for folderpath in args.folderpaths:
     create_video(folderpath, args.musicdb, args.outputdir)
