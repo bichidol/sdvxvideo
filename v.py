@@ -159,6 +159,7 @@ def get_sanitized_filename(filename):
             '��8' : 'ê8',
             '��9' : 'ê9',
             '�� ' : 'ê ',
+            '�H' : '⑨',
         }
     
     for bad, good in homoglyphs.items():
