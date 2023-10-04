@@ -96,6 +96,7 @@ def get_sanitized_filename(filename):
             '鑈' : '♦',
             '齲' : '♥',
             '驫' : 'ā',
+            '饌' : '²',
         }
     
     for bad, good in homoglyphs.items():
